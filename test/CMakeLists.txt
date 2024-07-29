@@ -2,23 +2,24 @@ include(../cmake/cuda.cmake)
 find_package(GTest REQUIRED)
 find_package(glog REQUIRED)
 
-set(link_ext_lib glog::glog GTest::gtest)
-aux_source_directory(../test DIR_TEST)
+file(GLOB_RECURSE KUIPER_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*/test*.cpp")
 
-aux_source_directory(../test/test_cu DIR_TEST_CU)
-aux_source_directory(../test/test_op DIR_TEST_OP)
-aux_source_directory(../test/test_model DIR_TEST_MODEL)
-aux_source_directory(../test/test_tensor DIR_TEST_TENSOR)
-add_executable(test_llm ${DIR_TEST} ${DIR_TEST_CU} ${DIR_TEST_OP} ${DIR_TEST_TENSOR} ${DIR_TEST_MODEL})
+foreach (kuiper_test_source ${KUIPER_TEST_SOURCES})
+    # Create a human readable name.
+    get_filename_component(kuiper_test_filename ${kuiper_test_source} NAME)
+    string(REPLACE ".cpp" "" kuiper_test_name ${kuiper_test_filename})
 
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -G")
-target_link_libraries(test_llm ${link_ext_lib})
-target_include_directories(test_llm PUBLIC ${glog_INCLUDE_DIR})
-target_include_directories(test_llm PUBLIC ${GTest_INCLUDE_DIR})
+    # Add the test target separately and as part of "make check-tests".
+    add_executable(${kuiper_test_name} EXCLUDE_FROM_ALL ${kuiper_test_source})
 
-target_include_directories(test_llm PUBLIC ../kuiper/include)
-target_link_directories(test_llm PUBLIC ${PROJECT_SOURCE_DIR}/lib)
-target_link_libraries(test_llm llama)
+    target_include_directories(${kuiper_test_name} PUBLIC ../kuiper/include)
+    target_link_directories(${kuiper_test_name} PUBLIC ${PROJECT_SOURCE_DIR}/lib)
+    target_link_libraries(${kuiper_test_name} llama glog GTest::Main )
 
-set_target_properties(test_llm PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-set_target_properties(test_llm PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    # Set test target properties and dependencies.
+    set_target_properties(${kuiper_test_name}
+            PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/test"
+            COMMAND ${kuiper_test_name}
+            )
+endforeach ()

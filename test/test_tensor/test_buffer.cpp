@@ -7,6 +7,7 @@
 TEST(test_buffer, allocate) {
   using namespace base;
   auto alloc = std::make_shared<CPUDeviceAllocator>();
+  // auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
   Buffer buffer(32, alloc);
   ASSERT_NE(buffer.GetPtr(), nullptr);
 }
@@ -14,6 +15,7 @@ TEST(test_buffer, allocate) {
 TEST(test_buffer, use_external) {
   using namespace base;
   auto alloc = std::make_shared<CPUDeviceAllocator>();
+  // auto alloc = base::CPUDeviceAllocatorFactory::get_instance();
   float* ptr = new float[32];
   Buffer buffer(32, nullptr, ptr, true);
   ASSERT_EQ(buffer.IsExternal(), true);

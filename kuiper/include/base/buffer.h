@@ -10,7 +10,7 @@ class Buffer : NoCopyable, std::enable_shared_from_this<Buffer> {
  public:
   explicit Buffer(std::size_t size, const std::shared_ptr<DeviceAllocator>& allocator, void* ptr = nullptr,
                   bool use_external = false)
-      : size_(size), allocator_(allocator), ptr_(ptr), use_external_(use_external) {
+      : use_external_(use_external), size_(size), ptr_(ptr), allocator_(allocator) {
     if (ptr_ == nullptr && allocator_ != nullptr) {
       device_type_ = allocator_->getDeviceType();
       ptr_ = allocator_->Allocate(size_);
@@ -26,9 +26,9 @@ class Buffer : NoCopyable, std::enable_shared_from_this<Buffer> {
 
   auto Allocate(std::size_t size) -> bool; 
 
-  auto IsExternal() -> bool const { return use_external_; }
+  auto IsExternal() -> bool { return use_external_; }
 
-  auto GetPtr() -> void* const { return ptr_; }
+  auto GetPtr() -> void* { return ptr_; }
 
  private:
   DeviceType device_type_{DeviceType::kDeviceUnknown};

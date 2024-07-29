@@ -15,10 +15,10 @@ void* CPUDeviceAllocator::Allocate(std::size_t size) const {
 }
 
 void* CPUDeviceAllocator::Release(void* ptr) const {
-  if (ptr == nullptr) {
-    std::cerr << "Release nullptr\n";
+  if (ptr) {
+    std::free(ptr);
   }
-  std::free(ptr);
+  return nullptr;
 }
 
 void* CPUDeviceAllocator::Memcpy(void* src, void* dest, std::size_t size) const {
@@ -26,6 +26,9 @@ void* CPUDeviceAllocator::Memcpy(void* src, void* dest, std::size_t size) const 
     std::cerr << "Memcpy src is nullptr\n";
   }
   std::memcpy(dest, src, size);
+  return nullptr;
 }
+
+std::shared_ptr<CPUDeviceAllocator> CPUDeviceAllocatorFactory::instance = nullptr;
 
 } // namespace base

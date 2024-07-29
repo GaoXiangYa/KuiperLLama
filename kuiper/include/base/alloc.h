@@ -9,7 +9,9 @@ class DeviceAllocator {
  public:
   explicit DeviceAllocator(DeviceType device_type) : device_type_(device_type) {}
 
-  virtual auto getDeviceType() -> const DeviceType { return device_type_; }
+  virtual ~DeviceAllocator() {}
+
+  virtual auto getDeviceType() -> DeviceType { return device_type_; }
 
   virtual void* Allocate(std::size_t size) const = 0;
 

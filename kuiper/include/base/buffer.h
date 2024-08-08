@@ -30,6 +30,8 @@ class Buffer : NoCopyable, std::enable_shared_from_this<Buffer> {
 
   auto GetPtr() -> void* { return ptr_; }
 
+  auto GetBufferSize() -> std::size_t { return size_; }
+
  private:
   DeviceType device_type_{DeviceType::kDeviceUnknown};
   bool use_external_{false};

@@ -25,8 +25,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 # Compiler flags.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINER_FLAGS} -fuse-ld=lld")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Werror")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fsanitize=${BUSTUB_SANITIZER} -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
@@ -35,8 +37,8 @@ message(STATUS "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
 message(STATUS "CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
 
 # add_library(llama SHARED  ${DIR_TENSOR} ${DIR_BASE} ${DIR_OP} ${DIR_KERNEL} ${DIR_MODEL} ${DIR_KERNEL_CPU} ${DIR_KERNEL_CUDA} ${DIR_KERNEL} ${DIR_SAMPLE})
-add_library(llama SHARED ${DIR_BASE})
-target_link_libraries(llama glog::glog gtest gtest_main pthread)
+add_library(llama SHARED ${DIR_BASE} ${DIR_TENSOR})
+target_link_libraries(llama glog::glog GTest::gtest_main pthread)
 # target_link_libraries(llama sentencepiece glog::glog gtest gtest_main pthread cudart ${ARMADILLO_LIBRARIES})
 # target_link_directories(llama PUBLIC ${CMAKE_CUDA_COMPILER_LIBRARY_ROOT}/lib64)
 
@@ -47,3 +49,6 @@ target_include_directories(llama PUBLIC ${PROJECT_SOURCE_DIR}/kuiper/include)
 # set_target_properties(llama PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 add_subdirectory(test)
 # add_subdirectory(demo)
+
+# cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=/usr/local/bin/clang++ -DCMAKE_C_COMPILER=/usr/local/bin/clang -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TEST=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda-12/bin/
+# nvcc -DCMAKE_CUDA_ARCHITECTURES=86 -GNinja ..

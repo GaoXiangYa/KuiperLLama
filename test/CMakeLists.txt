@@ -14,7 +14,7 @@ foreach (kuiper_test_source ${KUIPER_TEST_SOURCES})
 
     target_include_directories(${kuiper_test_name} PUBLIC ../kuiper/include)
     target_link_directories(${kuiper_test_name} PUBLIC ${PROJECT_SOURCE_DIR}/lib)
-    target_link_libraries(${kuiper_test_name} llama glog GTest::Main )
+    target_link_libraries(${kuiper_test_name} llama glog::glog GTest::Main )
 
     # Set test target properties and dependencies.
     set_target_properties(${kuiper_test_name}

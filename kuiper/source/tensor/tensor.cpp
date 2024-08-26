@@ -16,7 +16,7 @@ namespace tensor {
 
 Tensor::Tensor(base::DataType data_type, std::initializer_list<std::int32_t> init_dim,
                bool need_alloc, std::shared_ptr<base::DeviceAllocator> alloc, void* ptr)
-    : data_type_(data_type), dims_(init_dim){
+    : data_type_(data_type), dims_(init_dim) {
   size_ = std::accumulate(init_dim.begin(), init_dim.end(), 1, [&](int a, int b) { return a * b; });
   // tensor 使用自己的alloctor 来给自己分配内存
   if (need_alloc && alloc) {
@@ -25,14 +25,34 @@ Tensor::Tensor(base::DataType data_type, std::initializer_list<std::int32_t> ini
     Allocate(alloc, need_alloc);
   } else {
     // 使用已有的资源来给tensor分配内存
-    is_empty_ = true;
     if (ptr != nullptr) {
       CHECK(need_alloc == false)
           << "The need_alloc is true when ptr parameter is not a null pointer.";
-      InitBuffer(alloc);
+      InitBuffer(alloc, data_type);
     }
   }
 }
+
+Tensor::Tensor(base::DataType data_type, std::size_t size, bool need_alloc,
+               std::shared_ptr<base::DeviceAllocator> alloc)
+    : data_type_(data_type), size_(size) {
+  if (need_alloc && alloc) {
+    Allocate(alloc, need_alloc);
+  }
+}
+
+Tensor::Tensor(base::DataType data_type, std::size_t size, bool need_alloc,
+               std::shared_ptr<base::DeviceAllocator> alloc, void* ptr)
+    : data_type_(data_type), size_(size) {
+      if (need_alloc && alloc) {
+        Allocate(alloc, need_alloc);
+      } else {
+        if (ptr != nullptr) {
+          CHECK(need_alloc == false) << "The need_alloc is true when ptr parameter is not a null pointer\n";
+          InitBuffer(alloc, data_type, ptr, need_alloc);
+        }
+      }
+    }
 
 auto Tensor::GetDim(std::int32_t idx) const -> std::int32_t {
   CHECK_GE(idx, 0);
@@ -43,7 +63,7 @@ auto Tensor::GetDim(std::int32_t idx) const -> std::int32_t {
 auto Tensor::Strides() const -> std::vector<std::size_t> {
   std::vector<std::size_t> strides;
   if (!dims_.empty()) {
-    for (auto ite = dims_.begin(); ite != dims_.end() - 1; ++ ite) {
+    for (auto ite = dims_.begin(); ite != dims_.end() - 1; ++ite) {
       std::size_t stride = std::accumulate(ite + 1, dims_.end(), 1, std::multiplies<>());
       strides.push_back(stride);
     }
@@ -52,12 +72,13 @@ auto Tensor::Strides() const -> std::vector<std::size_t> {
   return strides;
 }
 
-void Tensor::InitBuffer(std::shared_ptr<base::DeviceAllocator> alloc, void* ptr) {
-  if (alloc == nullptr) {
-    std::shared_ptr<base::Buffer> buffer = std::make_shared<base::Buffer>(GetByteSize(), nullptr, ptr, true);
+void Tensor::InitBuffer(std::shared_ptr<base::DeviceAllocator> alloc, base::DataType data_type, void* ptr,  bool need_alloc) {
+  if (alloc == nullptr && !need_alloc) {
+    std::shared_ptr<base::Buffer> buffer =
+        std::make_shared<base::Buffer>(GetDataTypeSize(data_type) * size_, nullptr, ptr, true);
     this->buffer_ = buffer;
   } else {
-    std::shared_ptr<base::Buffer> buffer = std::make_shared<base::Buffer>(GetByteSize(), alloc, ptr, false);
+    Allocate(alloc, true);
   }
 }
 
@@ -93,6 +114,10 @@ auto Tensor::Allocate(std::shared_ptr<base::DeviceAllocator> allocator, bool nee
     return false;
   }
   return true;
+}
+
+auto Tensor::Isempty() -> bool {
+  return size_ == 0 || buffer_ == nullptr || buffer_->GetPtr() == nullptr;
 }
 
 }  // namespace tensor

@@ -16,7 +16,7 @@ class CPUDeviceAllocator : public DeviceAllocator {
 
   virtual void* Release(void* ptr) const override;
 
-  virtual void* Memcpy(void* src, void* dest, std::size_t size) const override;
+  virtual void Memcpy(const void* src, void* dest, std::size_t byte_size, MemcpyKind memcpy_kind = MemcpyKind::kMemcpyCPU2CPU, void* stream = nullptr, bool need_sync = false) const override;
 
 };
 

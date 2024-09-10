@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 #include <cstddef>
 #include <cstdio>
+#include <vector>
 
 namespace base {
 
@@ -66,6 +67,51 @@ void* CUDADeviceAllocator::Allocate(std::size_t byte_size) const {
   }
   cuda_buffers.emplace_back(ptr, byte_size, true);
   return ptr;
+}
+
+void* CUDADeviceAllocator::Release(void* ptr) const {
+  cudaError_t state;
+  for (auto& it : cuda_buffers_map_) {
+    if (no_busy_cnt_[it.first] > ONE_GB) {
+      auto& cuda_buffers = it.second;
+      std::vector<CUDAMemoryBuffer> temp;
+      int cuda_buffers_size = cuda_buffers.size();
+      for (int i = 0; i < cuda_buffers_size; ++i) {
+        if (!cuda_buffers[i].busy) {
+          state = cudaSetDevice(it.first);
+          state = cudaFree(cuda_buffers[i].data);
+          CHECK(state == cudaSuccess)
+              << "Error: CUDA error when release memory on device" << it.first;
+        } else {
+          temp.push_back(cuda_buffers[i]);
+        }
+      }
+      cuda_buffers.clear();
+      it.second = temp;
+      no_busy_cnt_[it.first] = 0;
+    }
+  }
+  for (auto& it : cuda_buffers_map_) {
+    auto& cuda_buffers = it.second;
+    int cuda_buffers_size = cuda_buffers.size();
+    for (int i = 0; i < cuda_buffers_size; ++i) {
+      if (cuda_buffers[i].data == ptr) {
+        no_busy_cnt_[it.first] += cuda_buffers[i].byte_size;
+        cuda_buffers[i].busy = false;
+        return nullptr;
+      }
+    }
+    auto& big_buffers = big_buffers_map_[it.first];
+    int big_buffers_size = big_buffers.size();
+    for (int i = 0; i < big_buffers_size; ++i) {
+      if (big_buffers[i].data == ptr) {
+        big_buffers[i].busy = false;
+      }
+    }
+  }
+  state = cudaFree(ptr);
+  CHECK(state == cudaSuccess) << "Error: CUDA error when release memory on device";
+  return nullptr;
 }
 
 }  // namespace base

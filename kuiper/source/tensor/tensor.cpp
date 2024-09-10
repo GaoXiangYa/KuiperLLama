@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
-#include <iterator>
 #include <memory>
 #include <numeric>
 #include <vector>
 #include "base/alloc.h"
+#include "base/alloc_cuda.h"
 #include "base/base.h"
 #include "base/buffer.h"
 
@@ -118,6 +118,15 @@ auto Tensor::Allocate(std::shared_ptr<base::DeviceAllocator> allocator, bool nee
 
 auto Tensor::Isempty() -> bool {
   return size_ == 0 || buffer_ == nullptr || buffer_->GetPtr() == nullptr;
+}
+
+void Tensor::ToCUDA(cudaStream_t stream) {
+  // const base::DeviceType device_type = this->GetDeviceType();
+  auto byte_size = this->GetByteSize();
+  auto cuda_alloc = base::CUDADeviceAllocatorFactory::GetInstance();
+  auto cuda_buffer = std::make_shared<base::Buffer>(byte_size, cuda_alloc);
+  cuda_alloc->Memcpy(buffer_->GetPtr(), cuda_buffer->GetPtr(), byte_size, base::MemcpyKind::kMemcpyCPU2CUDA, stream);
+  this->buffer_ = cuda_buffer;
 }
 
 }  // namespace tensor

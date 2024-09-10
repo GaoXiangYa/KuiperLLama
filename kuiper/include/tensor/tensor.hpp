@@ -1,10 +1,10 @@
 #pragma once
 
+#include <cuda_runtime_api.h>
 #include <glog/logging.h>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
-#include <iterator>
 #include <memory>
 #include <vector>
 #include "base/alloc.h"
@@ -31,6 +31,7 @@ class Tensor {
     }
     return buffer_->GetDeviceType();
   }
+  void ToCUDA(cudaStream_t stream);
 
   template <typename T>
   T* Ptr();
@@ -49,7 +50,8 @@ class Tensor {
   auto GetDataTypeSize(base::DataType data_type) -> std::size_t;
   auto GetByteSize() -> std::size_t { return GetDataTypeSize(data_type_) * size_; }
   auto Allocate(std::shared_ptr<base::DeviceAllocator> alloc, bool need_alloc = false) -> bool;
-  void InitBuffer(std::shared_ptr<base::DeviceAllocator> alloc, base::DataType data_type, void* ptr = nullptr, bool need_alloc = false);
+  void InitBuffer(std::shared_ptr<base::DeviceAllocator> alloc, base::DataType data_type,
+                  void* ptr = nullptr, bool need_alloc = false);
 
  private:
   base::DataType data_type_{base::DataType::kDataUnknown};

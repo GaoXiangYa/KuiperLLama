@@ -8,7 +8,7 @@
 #include "op/swiglu.h"
 namespace model {
 
-struct LLama2Layers {
+struct Qwen2Layers {
   std::shared_ptr<op::Layer> add_layer_;
   std::shared_ptr<op::Layer> rope_layer_;
   std::shared_ptr<op::Layer> swiglu_layer_;
@@ -30,9 +30,10 @@ struct LLama2Layers {
   void to_cuda(std::shared_ptr<kernel::CudaConfig> config);
 };
 
-class LLama2Model : public Model {
+class Qwen2Model : public Model {
  public:
-  explicit LLama2Model(std::string token_path, std::string model_path, bool is_quant_model);
+  explicit Qwen2Model(base::TokenizerType tokenizer_type, std::string token_path,
+                      std::string model_path, bool is_quant_model);
 
   base::Status init(base::DeviceType device_type) override;
 
@@ -42,19 +43,7 @@ class LLama2Model : public Model {
   base::Status forward(const tensor::Tensor& input, const tensor::Tensor& pos_tensor,
                        int& next) const override;
 
-  std::vector<int32_t> encode(const std::string& sentence) const override;
-
-  int32_t get_eos() const override;
-
-  std::string decode(int32_t token_idx) const override;
-
-  std::pair<tensor::Tensor, tensor::Tensor> slice_kv_cache(int32_t layer_idx,
-                                                           int32_t token_pos) const override;
-
-  op::EmbeddingOutput embedding(const std::vector<int>& tokens) const;
-
-  tensor::Tensor fill_input(const tensor::Tensor& pos_tensor,
-                            const op::EmbeddingOutput& embedding_output, bool is_prompt) const;
+  op::EmbeddingOutput embedding(const std::vector<int>& tokens) const override;
 
  private:
   void init_mem() override;
@@ -81,7 +70,7 @@ class LLama2Model : public Model {
 
  private:
   std::shared_ptr<kernel::CudaConfig> cuda_config_;
-  std::unique_ptr<LLama2Layers> llama_layers_;
+  std::unique_ptr<Qwen2Layers> qwen_layers_;
 };
 }  // namespace model
 

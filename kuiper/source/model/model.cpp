@@ -79,26 +79,14 @@ base::Status Model::read_model_file() {
     raw_model_data_ = std::make_shared<RawModelDataInt8>();
   }
 
-  struct stat st;
-  if (fstat(fd, &st) == -1) {
+  struct stat sb;
+  if (fstat(fd, &sb) == -1) {
     close(fd);
     return error::ModelParseError(
         "Failed to retrieve the file size information from the model "
         "file.");
   }
-  raw_model_data_->file_size = st.st_size;
-  LOG(INFO) << "The tokenizer model path: " << token_path_;
-  std::string tokenizer_type_str = tokenizer_type_ == TokenizerType::kEncodeBpe ? "Bpe" : "Spe";
-  LOG(INFO) << "The tokenizer type: " << tokenizer_type_str;
-
-  LOG(INFO) << "The model path: " << model_path_;
-  LOG(INFO) << "The model file size: " << raw_model_data_->file_size << " byte";
-  std::string quant_info = is_quant_model_ ? "quant" : "not quant";
-  LOG(INFO) << "The model is " << quant_info << " model";
-
-  if (config_) {
-    LOG(INFO) << "\nThe model info: " << *config_;
-  }
+  raw_model_data_->file_size = sb.st_size;
 
   raw_model_data_->fd = fd;
   raw_model_data_->data =
@@ -133,7 +121,9 @@ base::Status Model::generate_model_infos(const ModelConfig& config) const {
   config_->kv_dim_ = (config.dim * config.kv_head_num) / config.head_num;
   config_->kv_mul_ = config.head_num / config.kv_head_num;
   config_->head_size_ = config.dim / config.head_num;
-
+#if defined(QWEN3_SUPPORT)
+  config_->immediate_dim_ = config.immediate_dim_;
+#endif
   if (config.vocab_size > 0) {
     config_->is_shared_weight_ = true;
   } else {
@@ -161,7 +151,7 @@ base::Status Model::create_encode_layer() {
     encode_layer_ = std::make_unique<op::BpeEncodeLayer>(this->token_path_, true, false);
 #endif
 
-#ifdef QWEN2_SUPPORT
+#if defined(QWEN2_SUPPORT) || defined(QWEN3_SUPPORT)
     encode_layer_ = std::make_unique<op::QwenEncodeLayer>(this->token_path_, false, false);
 #endif
   }
@@ -184,19 +174,18 @@ base::Status Model::gen_model_from_file() {
   // google sentence piece
   auto create_encode_status = create_encode_layer();
   if (!create_encode_status) {
-    LOG(ERROR) << "Create the encode layer failed! " << create_encode_status.get_err_msg();
+    LOG(ERROR) << "Create the encode layer failed!";
     return create_encode_status;
   }
   // mmap
   auto mmap_status = read_model_file();
   if (!mmap_status) {
-    LOG(ERROR) << "Read model file " << model_path_ << " failed! " << mmap_status.get_err_msg();
+    LOG(ERROR) << "Handle model file " << model_path_ << " failed!";
     return mmap_status;
   }
   auto layer_create_status = create_layers();
   if (!layer_create_status) {
-    LOG(ERROR) << "Create layers for the model file " << model_path_ << " failed! "
-               << mmap_status.get_err_msg();
+    LOG(ERROR) << "Create layers for the model file " << model_path_ << " failed!";
     return layer_create_status;
   }
 
@@ -252,11 +241,18 @@ tensor::Tensor Model::fill_input(const tensor::Tensor& pos_tensor,
   if (is_prompt) {
     index = pos;
   }
+#if defined(QWEN3_SUPPORT)
+  std::shared_ptr<base::Buffer> input_emb_buffer = std::make_shared<base::Buffer>(
+      config_->hidden_dim_ * sizeof(float), nullptr,
+      input_embeddings.ptr<float>(index * config_->hidden_dim_), true);
+  tensor::Tensor input(base::DataType::kDataTypeFp32, config_->hidden_dim_);
+
+#else
   std::shared_ptr<base::Buffer> input_emb_buffer =
       std::make_shared<base::Buffer>(config_->dim_ * sizeof(float), nullptr,
                                      input_embeddings.ptr<float>(index * config_->dim_), true);
-
   tensor::Tensor input(base::DataType::kDataTypeFp32, config_->dim_);
+#endif
   input.assign(input_emb_buffer);
   input.set_device_type(device_type_);
   return input;
